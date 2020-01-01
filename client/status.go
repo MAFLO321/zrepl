@@ -461,12 +461,16 @@ func (t *tui) renderReplicationReport(rep *report.Report, history *bytesProgress
 	if latest.State != report.AttemptPlanning && latest.State != report.AttemptPlanningError {
 		// Draw global progress bar
 		// Progress: [---------------]
-		expected, replicated := latest.BytesSum()
+		expected, replicated, containsInvalidSizeEstimates := latest.BytesSum()
 		rate, changeCount := history.Update(replicated)
 		t.write("Progress: ")
 		t.drawBar(50, replicated, expected, changeCount)
 		t.write(fmt.Sprintf(" %s / %s @ %s/s", ByteCountBinary(replicated), ByteCountBinary(expected), ByteCountBinary(rate)))
 		t.newline()
+		if containsInvalidSizeEstimates {
+			t.write("NOTE: not all steps could be size-estimated, total estimate is likely imprecise!")
+			t.newline()
+		}
 
 		var maxFSLen int
 		for _, fs := range latest.Filesystems {
@@ -707,11 +711,20 @@ func (t *tui) drawBar(length int, bytes, totalBytes int64, changeCount int) {
 
 func (t *tui) printFilesystemStatus(rep *report.FilesystemReport, active bool, maxFS int) {
 
-	expected, replicated := rep.BytesSum()
-	status := fmt.Sprintf("%s (step %d/%d, %s/%s)",
+	expected, replicated, containsInvalidSizeEstimates := rep.BytesSum()
+	sizeEstimationImpreciseNotice := ""
+	if containsInvalidSizeEstimates {
+		sizeEstimationImpreciseNotice = " (some steps lack size estimation)"
+	}
+	if rep.CurrentStep < len(rep.Steps) && rep.Steps[rep.CurrentStep].Info.BytesExpected == 0 {
+		sizeEstimationImpreciseNotice = " (step lacks size estimation)"
+	}
+
+	status := fmt.Sprintf("%s (step %d/%d, %s/%s)%s",
 		strings.ToUpper(string(rep.State)),
 		rep.CurrentStep, len(rep.Steps),
 		ByteCountBinary(replicated), ByteCountBinary(expected),
+		sizeEstimationImpreciseNotice,
 	)
 
 	activeIndicator := " "
