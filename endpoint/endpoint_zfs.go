@@ -128,7 +128,7 @@ func GetReplicationCursors(ctx context.Context, fs *zfs.DatasetPath, jobID JobID
 
 	if len(listOut.V1ReplicationCursors) > 0 {
 		getLogger(ctx).WithField("bookmark", pretty.Sprint(listOut.V1ReplicationCursors)).
-			Warn("found v1-replication cursor bookmarks, consider running migration 'replication-cursor:v1-v2'")
+			Warn("found v1-replication cursor bookmarks, consider running migration 'replication-cursor:v1-v2' after successful replication with this zrepl version")
 	}
 
 	candidates := make([]zfs.FilesystemVersion, 0)
